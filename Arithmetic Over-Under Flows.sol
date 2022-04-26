@@ -50,7 +50,7 @@ The transfer() is vulnerable to over/underflow attack as the attacker controls t
 // 0-1 = 115792089237316195423570985008687907853269984665640564039457584007913129639935 > 0 so evaluates to true
 require(balances[msg.sender] - _value >= 0);
 
-// balances[msg.sender] = 0 - 1 = 115792089237316195423570985008687907853269984665640564039457584007913129639935. That's a lot of free tokens.
+// balances[msg.sender] = 0 - 1 = 115792089237316195423570985008687907853269984665640564039457584007913129639935. That's a lot of free token.
 balances[msg.sender] -= _value;
 
 // balances[_to] = 0 + 1
