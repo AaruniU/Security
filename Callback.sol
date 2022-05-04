@@ -1,7 +1,23 @@
-Following the example provided in https://github.com/sigp/solidity-security-blog#the-vulnerability-3
+Delegatecall Vulnerability
+
+There are two kinds of low level functions invocations: call() and delegatecall(). The latter is used when we wish to execute an external function in the context of the caller contract. This means the target function can manipulate the state variables of the caller contract. So, if contract A issues a delegatecall to B.foo(), then foo() will have access to state variables in A and run as if it is one of A's functions. The way this works is that solidity stores state variables in slots in the order the variables appear in the contract. For example, and we are going to avoid complexities here, if a contract A has three state variables( say uint A; uint B; uint C;), they will be assigned slot0, slot1 and slot2 respectively. So regardless of the state variable names contract B uses, if B.foo() changes the value of B's first state variable (i.e. slot0 in contract B), it will change the value stored in slot0 of contract A (i.e. uint A in contract A). This behaviour introduces vulnerabilities when we use delegatecall() instead of call() for external function invocations. 
+
+To make them work with the Solidity v0.8.10 compiler, I upgraded the FibonacciLib and FibonacciBalance contracts provided at https://github.com/sigp/solidity-security-blog#4-delegatecall-1. I have provided below an Attacker contract that exploits this delegatecall() vulnerability and another contract StealEther that simply stores the stolen funds.
+
+How to run:
+1. Deploy StealEther contract, copy the address where it is deployed
+2. Go to Attacker contract and paste this address in fallback()
+3. Deploy FibonacciLib, copy the address
+4. Deploy FibonacciBalance with 100 wei and supply FibonacciLib's address to the constructor
+5. Deploy Attacker contract and provide FibonacciBalance's contract address to the constructor
+6. Invoke StealEther.tellBalance() - should return 0 wei
+7. Invoke Attacker.changeTargetAddress()
+	7.1 Check the value of FibonacciBalance.calculatedFibNumber - it should now store the address of Attacker contract
+8. Invoke Attacker.callWithdraw()
+9. Check the value of StealEther.tellBalance() - Should show 100 wei
+
 
 // SPDX-License-Identifier: MIT
-
 pragma solidity 0.8.10;
 
 // library contract - calculates fibonacci-like numbers;
@@ -31,7 +47,6 @@ contract FibonacciLib
 }
 
 // SPDX-License-Identifier: MIT
-
 pragma solidity 0.8.10;
 
 contract FibonacciBalance 
@@ -69,9 +84,9 @@ contract FibonacciBalance
 }
 
 // SPDX-License-Identifier: MIT
-
 pragma solidity 0.8.10;
 
+// Our exploit
 contract Attacker
 {
     address target;
@@ -115,9 +130,9 @@ contract Attacker
 }
 
 // SPDX-License-Identifier: MIT
-
 pragma solidity 0.8.10;
 
+// Save stolen funds
 contract StealEther
 {
     // Accept the stolen Ether
@@ -128,15 +143,3 @@ contract StealEther
         return address(this).balance;
     }
 }
-
-How to run:
-1. Deploy StealEther contract, copy the address where it is deployed
-2. Go to Attacker contract and paste this address in fallback()
-3. Deploy FibonacciLib, copy the address
-4. Deploy FibonacciBalance with 100 wei and supply FibonacciLib's address to the constructor
-5. Deploy Attacker contract and provide FibonacciBalance's contract address to the constructor
-6. Invoke StealEther.tellBalance() - should return 0 wei
-7. Invoke Attacker.changeTargetAddress()
-	7.1 Check the value of FibonacciBalance.calculatedFibNumber - it should now store the address of Attacker contract
-8. Invoke Attacker.callWithdraw()
-9. Check the value of StealEther.tellBalance() - Should show 100 wei
