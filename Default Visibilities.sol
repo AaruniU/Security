@@ -1,0 +1,1 @@
+Earlier version of solidity did not enforce defining visibility on functions. This created situations where an attacker would be able to call a function that he/she souldn't be. Recent Solidity versions enforce setting up visibility on every function so this vulnerability has been mitigated.
