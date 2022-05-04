@@ -1,0 +1,1 @@
+There is no random() function in Solidity so the developers end up using other means of achieviving randomness such as using hash of next block as a random value. If this source of entropy is not selected carefully, it can be used by an attacker to predict the next "random" value and exploit a contract.
