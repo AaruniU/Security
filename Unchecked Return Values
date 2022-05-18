@@ -1,0 +1,25 @@
+We can use <address>.transfer() to send Ether which is considered safe as it reverts in case the transfer fails. We can also use <address>.send() and <address>.call() to transfer Ether but they only return a value of false if they fail. This creates a security vulnerability where an attacker can target a transaction that should have reverted when send() or call() failed.
+
+Below is an example provided at https://github.com/sigp/solidity-security-blog#9-unchecked-call-return-values-1
+
+contract Lotto {
+
+    bool public payedOut = false;
+    address public winner;
+    uint public winAmount;
+
+    // ... extra functionality here
+
+    function sendToWinner() public {
+        require(!payedOut);
+        winner.send(winAmount);
+        payedOut = true;
+    }
+
+    function withdrawLeftOver() public {
+        require(payedOut);
+        msg.sender.send(this.balance);
+    }
+}
+
+If winner.send(winAmount) somehow fails, it will simply return false but the transaction will not be reverted - this results in payedOut being set to true. Now since payedOut is set to true, withdrawLeftOver() can be executed by anyone to steal all the funds.
