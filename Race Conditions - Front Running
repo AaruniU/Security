@@ -1,0 +1,44 @@
+Miners get to choose what transaction they would pick up from the pool to form a block and this means the transactions that carry a high gasPrice will likely be picked up first. A Race condition occurs when an attacker can read a transaction on the blockchain and create a similar transaction with a higher gas value so their transaction gets executed before the original transaction. The original transaction may contain some information that the attacker can copy and duplicate in a new transaction to benefit them.
+
+Let’s look at the example provided at https://github.com/sigp/solidity-security-blog#10-race-conditions--front-running-1
+
+contract FindThisHash {
+    bytes32 constant public hash = 0xb5b5b97fafd9855eec9b41f74dfb6c38f5951141f9a3ecd7f44d5479b630ee0a;
+
+    constructor() public payable {} // load with ether
+
+    function solve(string solution) public {
+        // If you can find the pre image of the hash, receive 1000 ether
+        require(hash == sha3(solution));
+        msg.sender.transfer(1000 ether);
+    }
+}
+
+The caller that invokes solve() with the correct solution "Ethereum!" gets 1000 Ether. An attacker can intercept this transaction and resubmit the solution as their own with a higher gasPrice to steal the prize of 1000 Ether.
+
+There are 2 threat actors in this scenario:
+Users: Users can read and duplicate a transaction with a higher gasPrice and wait for a miner to pick up their transaction first.
+Miners: A miner will have to read the transaction, reorder the transaction in the block and then hope to solve that specific block which is unlikely.
+
+The first threat actor "User" can be mitigated by setting an upper limit on the gasPrice: require(gasleft() < 50000); However miners can still attack this contract as they can reorder the transactions.
+
+A more robust way is to use a commit-reveal scheme that happens in this order:
+1. Commit: The values of interest (e.g. bid amount in an auction) is hashed (usually Keccak256) and stored in state variables (stored on chain).
+2. Reveal: The hashed values are revealed in a new transaction and matched with the hashed values provided in Step 1
+
+Lets look at BlindAuction contract provided at https://docs.soliditylang.org/en/v0.5.3/solidity-by-example.html#id2
+
+function bid(bytes32 _blindedBid) public payable onlyBefore(biddingEnd)
+{
+	bids[msg.sender].push(Bid({blindedBid: _blindedBid, deposit: msg.value}));
+}
+
+bid() is used to accept _blindedBid which is a hash of [bid value, fake flag and a secret code]. This is the Commit stage.
+
+Next, the Reveal stage is implemented through function reveal(uint[] memory _values, bool[] memory _fake, bytes32[] memory _secret) that asks user to provide the actual bid amount, flag values and secret code values. It then computes Keccak256 of these values and compares the hash with the ones provided in bid() for authenticity. 
+
+This two-step commit-reveal ensures the bid values are written to the blockchain before the actual values are revealed hence providing some protection against front running. An attacker can try to simply watch all transactions that are calling bid() on the blockchain and just bid the highest value themselves right before the auction ends BUT all the bid hashes accepted by bid() have a "fake" flag included in them. So this way an attacker might end up bidding much higher than the winning bid making it a losing proposition for them.
+
+The topic of Frontrunning is broad and has developed significantly in the last few years. Now we have the Sandwich attacks that target liquidity pools of ERC20 tokens and flashbots that provide a way for users to send their transactions directly to the miners thus avoiding detection before the transaction are run and committed to the block chain.
+
+Probably a whole book can be written in the topic of Front running - so more on this later.
