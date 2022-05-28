@@ -1,0 +1,14 @@
+These attacks can leave a contract inoperable either temporarily or permanently. There are many ways a contract can become inoperable; some are presented below:
+
+1. External function calls: An external function may maliciously use all gas when called, making a contract temporarily or even permanently inoperable. For example, the TrickleWallet at https://github.com/sigp/solidity-security-blog#the-vulnerability-10 issues a function call to the "partner": partner.call.value(amountToSend)();. Once set, the partner address can only be changed by the partner themselves. Now if a malicioud "partner" wanted to make this contract inoperable, they can simply add this function at the "partner" address to consume all the gas supplied to it:
+
+function() payable
+{	assert(false);	}
+
+This function will spend all the gas passed to it rendering TrickleWallet unable to execute any statement past partner.call.value(amountToSend)();
+
+To mitigate this, always declare the maximum amount of gas that can be supplied when calling the external function: partner.call.value{gas: 50000} (amountToSend)();
+
+2. Looping through externally manipulated mappings or arrays: If you are adding items supplied by users to an array or mapping, there is a possibility of the contract consuming too much gas if the mapping/array becomes really huge. If you have a loop (e.g. for loop) that goes through this list, it may consume so much gas that it might exceed the current block gas limit making the contract inoperable.
+
+3. Progressing state based on external calls: If a contract waits for an external call to correctly finish before moving to the next state, then it is making it self vulnerable if the external function call fails or is delayed for malicious reasons, programming bugs or due to user errors. For example, contract A waits on successful Ether transfer to contract B but a malicious actor has not included any payable function in B thus preventing contract A from changing its state.
