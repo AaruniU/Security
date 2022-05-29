@@ -1,0 +1,5 @@
+Miners have the ability to manipulate block.timestamp so it can be exploited if there is an incentive to do so. There are some restrictions on how miners can change block.timestamp: It has to be greater than the last parent block and it can not be too far in the future otherwise other nodes will reject it.
+
+Let's look at the example provided at https://github.com/sigp/solidity-security-blog#12-block-timestamp-manipulation-1
+
+The miner can manipulate "now" (an alias for block.timestamp) and inject a transaction of their own so "if(now % 15 == 0)" evaluates to true and they can take all the Ether.
