@@ -1,0 +1,14 @@
+Its tempting to use Tx.Origin as a way to verify the original sender of a transaction but this approach is vulnerable to a phishing attack. 
+
+For example, consider a contract C that only likes to be called by an address A:
+
+contract C
+{
+	function foo() public view
+	{
+		require(tx.origin == <A's address>);
+		...
+	}
+}
+
+Now an attacker B can create an innocuous contract B and have A call contract B which, in turn, calls C.foo(). So C sees the tx.origin = A but the attacker's contract B is sitting as a man-in-the-middle.
