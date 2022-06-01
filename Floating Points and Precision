@@ -1,0 +1,9 @@
+Solidity does not support floating point types and as such any such calculation needs to be simulated carefully with uint. This however can produce a vulnerability if not done right.
+
+Lets look at the contract FunWithNumbers from https://github.com/sigp/solidity-security-blog#15-floating-points-and-precision
+
+This line below is converting ETH to some token. 
+
+uint tokens = msg.value/weiPerEth*tokensPerEth;
+
+The problem is in the division - if msg.value is less than 1 ETH (10^18 Wei) then the result of division will be rounded off to zero as only integer types are supported. As a result, "tokens" will always rounded down to the nearest integer. So, if msg.value = 0.5 ETH then tokens = 0 and if msg.value = 1.9 ETH then tokens = 1 ETH.
